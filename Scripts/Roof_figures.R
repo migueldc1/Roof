@@ -292,18 +292,18 @@ colnames(sample_df)[13] <- "EC"
 
 ## Community data
 #Bacteria
-asv_prok <- as.data.frame(readRDS("Data/Sequencing/Outputs/ASV_prok.rds"))
+asv_prok <- as.data.frame(readRDS("Data/ASV_prok.rds"))
 
-tax_prok <- readRDS("Data/Sequencing/Outputs/tax_prok.rds")
+tax_prok <- readRDS("Data/tax_prok.rds")
 tax.ud_prok <- tax_prok
 tax.ud_prok[tax.ud_prok == "Unidentified"] <- NA
 tax.ud_prok <- set_unid(tax.ud_prok)
 
 
 #Fungi
-asv_fun <- as.data.frame(readRDS("Data/Sequencing/Outputs/ASV_fun.rds"))
+asv_fun <- as.data.frame(readRDS("Data/ASV_fun.rds"))
 
-tax_fun <- readRDS("Data/Sequencing/Outputs/tax_fun.rds")
+tax_fun <- readRDS("Data/tax_fun.rds")
 tax.ud_fun <- tax_fun
 tax.ud_fun[tax.ud_fun == "Unidentified"] <- NA
 tax.ud_fun <- set_unid(tax.ud_fun)
@@ -655,9 +655,9 @@ gg.rare_prok <- ggplot(rare_prok.plot, aes(x = N.reads, y = N.ASVs, group = Samp
 
 gg.rare_prok
 
-#asv.r_prok <- rare_list(asv_prok, 36997, bootstrap = 100) 
+asv.r_prok <- rare_list(asv_prok, 36997, bootstrap = 100) 
 #saveRDS(asv.r_prok, "Outputs/asv.r_prok.rds")
-asv.r_prok <- readRDS("Outputs/asv.r_prok.rds")
+#asv.r_prok <- readRDS("Outputs/asv.r_prok.rds")
 
 #
 #### FUNGI                  ####
@@ -684,9 +684,9 @@ gg.rare_fun <- ggplot(rare_fun.plot, aes(x = N.reads, y = N.ASVs, group = Sample
 
 gg.rare_fun
 
-#asv.r_fun2 <- rare_list(asv_fun, 47909, bootstrap = 100) 
+asv.r_fun <- rare_list(asv_fun, 47909, bootstrap = 100) 
 #saveRDS(asv.r_fun, "Outputs/asv.r_fun.rds")
-asv.r_fun <- readRDS("Outputs/asv.r_fun.rds")
+#asv.r_fun <- readRDS("Outputs/asv.r_fun.rds")
 
 #
 ################################### EXPORT FIGURE                ####
