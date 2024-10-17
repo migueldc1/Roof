@@ -285,7 +285,7 @@ rare_list <- function(asv_df, depth, bootstrap = 100) {
 sample_df <- read.table("Data/sample_df.txt", sep = "\t", header = TRUE, encoding = "latin1", na.strings = "")
 sample_df$sample_time <- factor(sample_df$sample_time, levels = c("Initial", "Final"))
 row.names(sample_df) <- sample_df$ID_well
-sample_df$Material <- factor(sample_df$Material, levels = c("SW", "CS", "SCG", "Peat"))
+sample_df$Feedstock <- factor(sample_df$Feedstock, levels = c("SW", "CS", "SCG", "Peat"))
 sample_df$Treatment <- factor(sample_df$Treatment, levels = c("SW", "SW-BC", "CS", "CS-BC", "SCG", "SCG-BC", "Peat"))
 
 colnames(sample_df)[13] <- "EC"
@@ -318,7 +318,7 @@ col_trt <- c("#613b25", "#453227", "#facb7a", "#cfb17e", "#2ac219", "#43803c", "
 names(col_trt) <- c("SCG", "SCG-BC", "CS", "CS-BC", "SW", "SW-BC", "Peat")
 
 col_t <- c("#000000", "#999999")
-names(col_t) <- c("Initial", "Final")
+names(col_t) <- c("With", "Without")
 
 #
 ################################################################################ FIGURE 1                     ####
@@ -344,7 +344,7 @@ gg.pca_soil <- ggplot() +
   geom_segment(data = soil.pca_vec, aes(x = 0, y = 0, xend = PC1*5, yend = PC2*5), 
                arrow = arrow(length = unit(0.2, "cm")), size = 1, alpha = 0.8) + 
   geom_line(data = soil.pca_df, aes(x = PC1, y = PC2, group = ID_block), color = "gray", show.legend = FALSE) +
-  geom_point(data = soil.pca_df, aes(x = PC1, y = PC2, fill = Material, color = sample_time, shape = Biochar, size = Biochar), stroke = 1.5) +
+  geom_point(data = soil.pca_df, aes(x = PC1, y = PC2, fill = Feedstock, color = sample_time, shape = Biochar.blending, size = Biochar.blending), stroke = 1.5) +
   geom_text(data = soil.pca_vec2, aes(x = PC1*5.25, y = PC2*5.25, label = property), size = 6) +
   scale_shape_manual(values = c(21, 23)) +
   scale_size_manual(values = c(4, 3), guide = "none") +
@@ -352,9 +352,9 @@ gg.pca_soil <- ggplot() +
   scale_color_manual(values = c("#000000", "#999999")) +
   xlab(paste("PC1 (", round(summary(soil_pca)$importance[2,]*100,2)[1], "%)", sep = "")) + 
   ylab(paste("PC2 (", round(summary(soil_pca)$importance[2,]*100,2)[2], "%)", sep = "")) + 
-  guides(shape = guide_legend(override.aes = list(size = c(3, 2), stroke = 2)),
-         color = guide_legend(title = "Time", override.aes = list(shape = 21, size = 3, stroke = 2)),
-         fill = guide_legend(override.aes = list(shape = 21, size = 3, color = NA))) +
+  guides(shape = guide_legend(title = "Biochar\nblending", override.aes = list(size = c(3, 2), stroke = 2), order = 2),
+         color = guide_legend(title = "Time", override.aes = list(shape = 21, size = 3, stroke = 2), order = 3),
+         fill = guide_legend(override.aes = list(shape = 21, size = 4, color = "black"), order = 1)) +
   theme_bw() +
   theme(legend.title = element_text(size = 17, color = "black"),
         legend.text = element_text(size = 16, color = "black"),
@@ -365,8 +365,30 @@ gg.pca_soil <- ggplot() +
 gg.pca_soil
 
 set.seed(1)
-adonis2(scale(sample_df[complete.cases(sample_df[,8:13]),8:13]) ~ Material + Biochar + sample_time, 
+adonis2(scale(sample_df[complete.cases(sample_df[,8:13]),8:13]) ~ Feedstock + Biochar.blending + sample_time, 
         data = sample_df[complete.cases(sample_df[,8:13]),], method = "eu")
+
+permanova_df <- sample_df[complete.cases(sample_df[,8:13]), ]
+
+set.seed(1)
+adonis2(scale(permanova_df[permanova_df$sample_time == "Initial",8:13]) ~ Feedstock * Biochar.blending, 
+        data = permanova_df[permanova_df$sample_time == "Initial", ], method = "eu")
+set.seed(1)
+adonis2(scale(permanova_df[permanova_df$sample_time == "Final",8:13]) ~ Feedstock * Biochar.blending, 
+        data = permanova_df[permanova_df$sample_time == "Final", ], method = "eu")
+
+dist_df <- as.matrix(dist(scale(sample_df[complete.cases(sample_df[,8:13]), 8:13])))
+diag(dist_df) <- NA
+
+wilcox.test(dist_df[row.names(dist_df) %in% row.names(permanova_df[permanova_df$sample_time == "Initial", ])],
+            dist_df[row.names(dist_df) %in% row.names(permanova_df[permanova_df$sample_time == "Final", ])])
+
+mean(dist_df[row.names(dist_df) %in% row.names(permanova_df[permanova_df$sample_time == "Initial", ])], na.rm = TRUE)
+mean(dist_df[row.names(dist_df) %in% row.names(permanova_df[permanova_df$sample_time == "Final", ])], na.rm = TRUE)
+
+boxplot(dist_df[row.names(dist_df) %in% row.names(permanova_df[permanova_df$sample_time == "Initial", ])],
+        dist_df[row.names(dist_df) %in% row.names(permanova_df[permanova_df$sample_time == "Final", ])])
+
 
 #
 #### VARIANCE PARTITIONING  ####
@@ -376,8 +398,8 @@ substrate_initial.dist <- as.matrix(vegdist(scale(substrate_initial[,8:13]), met
 
 ## Variance partitioning analysis
 varp_initial <- varpart(substrate_initial.dist, 
-                        ~ Material,
-                        ~ Biochar,
+                        ~ Feedstock,
+                        ~ Biochar.blending,
                         data = substrate_initial[row.names(substrate_initial.dist),])
 
 ## Set results in a graphicable format
@@ -386,8 +408,8 @@ varp.plot_initial <- varp_initial$part$indfract
 varp.plot_initial$Adj.R.squared <- (varp.plot_initial$Adj.R.squared - min(varp.plot_initial$Adj.R.squared)) /
   sum(varp.plot_initial$Adj.R.squared - min(varp.plot_initial$Adj.R.squared))
 
-varp.plot_initial$variable <- c("Compost", "Biochar", "Shared", "Residuals")
-varp.plot_initial$variable <- factor(varp.plot_initial$variable, levels = c("Compost", "Biochar", "Shared", "Residuals"))
+varp.plot_initial$variable <- c("Feedstock", "Biochar-blending", "Shared", "Residuals")
+varp.plot_initial$variable <- factor(varp.plot_initial$variable, levels = c("Feedstock", "Biochar-blending", "Shared", "Residuals"))
 
 
 
@@ -396,8 +418,8 @@ substrate_final.dist <- as.matrix(vegdist(scale(substrate_final[-15,8:13]), meth
 
 ## Variance partitioning analysis
 varp_final <- varpart(substrate_final.dist, 
-                      ~ Material,
-                      ~ Biochar,
+                      ~ Feedstock,
+                      ~ Biochar.blending,
                       data = substrate_final[row.names(substrate_final.dist),])
 
 ## Set results in a graphicable format
@@ -406,8 +428,8 @@ varp.plot_final <- varp_final$part$indfract
 varp.plot_final$Adj.R.squared <- (varp.plot_final$Adj.R.squared - min(varp.plot_final$Adj.R.squared)) /
   sum(varp.plot_final$Adj.R.squared - min(varp.plot_final$Adj.R.squared))
 
-varp.plot_final$variable <- c("Compost", "Biochar", "Shared", "Residuals")
-varp.plot_final$variable <- factor(varp.plot_final$variable, levels = c("Compost", "Biochar", "Shared", "Residuals"))
+varp.plot_final$variable <- c("Feedstock", "Biochar-blending", "Shared", "Residuals")
+varp.plot_final$variable <- factor(varp.plot_final$variable, levels = c("Feedstock", "Biochar-blending", "Shared", "Residuals"))
 
 
 varp.plot_total <- rbind(cbind.data.frame(Time = "Initial", varp.plot_initial),
@@ -417,7 +439,8 @@ varp.plot_total$Time <- factor(varp.plot_total$Time, levels = c("Initial", "Fina
 
 gg.varp_functioning <- ggplot(data = varp.plot_total) +
   geom_bar(aes(x = Time, y = Adj.R.squared, fill = variable), stat = "identity", position = position_fill(reverse = TRUE)) +
-  scale_fill_manual(values = c("#d5954f", "#00954f", "#726200", "#4d4d4d")) +
+  scale_fill_manual(values = c("#d5954f", "#00954f", "#726200", "#4d4d4d"),
+                    labels = c("Feedstock", "Biochar", "Shared", "Residuals")) +
   guides(fill = guide_legend(nrow = 2)) +
   ylab("Variance explained") +
   theme_minimal() +
@@ -439,7 +462,7 @@ gg.varp_functioning
 #### TOMATO PROPERTIES      ####
 
 tomato_df <- melt(sample_df[complete.cases(sample_df),c(1:7, 14,15)], 
-                  id.vars = c("ID_well", "ID_block", "ID_sample", "sample_time", "Biochar", "Material", "Treatment"))
+                  id.vars = c("ID_well", "ID_block", "ID_sample", "sample_time", "Biochar.blending", "Feedstock", "Treatment"))
 
 tomato_df$Treatment <- factor(tomato_df$Treatment, 
                               levels = c("SW", "SW-BC", "CS", "CS-BC", "SCG", "SCG-BC", "Peat"))
@@ -497,7 +520,7 @@ sample_df_try <- sample_df
 sample_df_try$empty <- NA
 
 
-soil_df <- melt(sample_df_try[,c(1:13,16:17)], id.vars = c("ID_well", "ID_block", "ID_sample", "sample_time", "Biochar", "Material", "Treatment"))
+soil_df <- melt(sample_df_try[,c(1:13,16:17)], id.vars = c("ID_well", "ID_block", "ID_sample", "sample_time", "Biochar.blending", "Feedstock", "Treatment"))
 soil_df$Treatment <- factor(soil_df$Treatment, 
                             levels = c("SW", "SW-BC", "CS", "CS-BC", "SCG", "SCG-BC", "Peat"))
 
@@ -558,7 +581,7 @@ ggsave("../Manuscript/Figures/Supp_Figure_S2.pdf", gg.figureS2, bg = "white", wi
 #### TOMATO YIELD vs HEIGH  ####
 
 gg.height_yield <- ggplot(data = substrate_final) +
-  geom_point(aes(x = Height, y = Yield, color = Material, shape = Biochar, size = Biochar)) +
+  geom_point(aes(x = Height, y = Yield, color = Feedstock, shape = Biochar.blending, size = Biochar.blending)) +
   scale_shape_manual(values = c(16, 18)) +
   scale_size_manual(values = c(4, 5), guide = "none") +
   scale_color_manual(values = col_mat) +
@@ -578,7 +601,7 @@ gg.height_yield
 #### INITIAL vs FINAL  ####
 
 substrate_df <- merge(subset(sample_df, sample_time == "Initial")[,c(2,5:13,16)], 
-                      subset(sample_df, sample_time == "Final")[,c(2,5:13,16)], by = c("ID_block", "Biochar", "Material", "Treatment"))
+                      subset(sample_df, sample_time == "Final")[,c(2,5:13,16)], by = c("ID_block", "Biochar.blending", "Feedstock", "Treatment"))
 
 substrate_df <- cbind.data.frame(substrate_df[,1:4], C = substrate_df$C.y/substrate_df$C.x, N = substrate_df$N.y/substrate_df$N.x,
                                  P = substrate_df$P.y/substrate_df$P.x, K = substrate_df$P.y/substrate_df$P.x, 
@@ -587,7 +610,7 @@ substrate_df <- cbind.data.frame(substrate_df[,1:4], C = substrate_df$C.y/substr
 
 substrate_df$empty <- NA
 
-substrate_df.plot <- melt(substrate_df, id.vars = c("ID_block", "Biochar", "Material", "Treatment"))
+substrate_df.plot <- melt(substrate_df, id.vars = c("ID_block", "Biochar.blending", "Feedstock", "Treatment"))
 substrate_df.plot$variable <- factor(substrate_df.plot$variable, levels = c("C", "N", "C_N", "empty", "P", "K", "pH", "EC"))
 
 stats_df <- NULL
@@ -731,14 +754,15 @@ nMDS_prok.plot <- merge(nMDS_prok.plot, sample_df, by = "ID_well")
 nMDS_prok.plot$sample_time <- factor(nMDS_prok.plot$sample_time, levels = c("Initial", "Final"))
 
 gg.nmds.bray_prok <- ggplot(nMDS_prok.plot) + 
-  geom_line(aes(x = MDS1, y = MDS2, fill = Material, group = ID_block), show.legend = FALSE) +
-  geom_point(aes(x = MDS1, y = MDS2, fill = Material, shape = Biochar, size = Biochar, color = sample_time), 
+  geom_line(aes(x = MDS1, y = MDS2, fill = Feedstock, group = ID_block), show.legend = FALSE) +
+  geom_point(aes(x = MDS1, y = MDS2, fill = Feedstock, shape = Biochar.blending, size = Biochar.blending, color = sample_time), 
              stroke = 1.5, show.legend = FALSE) +
   scale_shape_manual(values = c(21, 23)) +
   scale_size_manual(values = c(4, 3), guide = "none") +
   scale_fill_manual(values = col_mat) +
   scale_color_manual(values = c("#000000", "#999999")) +
   annotate(geom = "text", x = Inf, y = Inf, label = paste("stress =", round(nMDS_prok$stress, 3)), size = 6, vjust = 1.2, hjust = 1.05) +
+  ggtitle("Bacteria") +
   theme_bw() +
   guides(shape = guide_legend(override.aes = list(size = c(3, 1))),
          color = guide_legend(override.aes = list(shape = 16, size = 3))) +
@@ -766,14 +790,15 @@ nMDS_fun.plot <- merge(nMDS_fun.plot, sample_df, by = "ID_well")
 nMDS_fun.plot$sample_time <- factor(nMDS_fun.plot$sample_time, levels = c("Initial", "Final"))
 
 gg.nmds.bray_fun <- ggplot(nMDS_fun.plot) + 
-  geom_line(aes(x = MDS1, y = MDS2, fill = Material, group = ID_block), show.legend = FALSE) +
-  geom_point(aes(x = MDS1, y = MDS2, fill = Material, shape = Biochar, size = Biochar, color = sample_time), 
+  geom_line(aes(x = MDS1, y = MDS2, fill = Feedstock, group = ID_block), show.legend = FALSE) +
+  geom_point(aes(x = MDS1, y = MDS2, fill = Feedstock, shape = Biochar.blending, size = Biochar.blending, color = sample_time), 
              stroke = 1.5, show.legend = FALSE) +
   scale_shape_manual(values = c(21, 23)) +
   scale_size_manual(values = c(4, 3), guide = "none") +
   scale_fill_manual(values = col_mat) +
   scale_color_manual(values = c("#000000", "#999999")) +
   annotate(geom = "text", x = Inf, y = Inf, label = paste("stress =", round(nMDS_fun$stress, 3)), size = 6, vjust = 1.2, hjust = 1.05) +
+  ggtitle("Fungi") +
   theme_bw() +
   guides(shape = guide_legend(override.aes = list(size = c(3, 1))),
          color = guide_legend(override.aes = list(shape = 16, size = 3))) +
@@ -790,16 +815,16 @@ gg.nmds.bray_fun
 
 ## Bacteria
 set.seed(1)
-adonis2(bray_prok ~ Material * Biochar + sample_time, data = sample_df[row.names(bray_prok),])
+adonis2(bray_prok ~ Feedstock * Biochar.blending + sample_time, data = sample_df[row.names(bray_prok),])
 set.seed(1)
-adonis2(bray_prok ~ Biochar, data = sample_df[row.names(bray_prok),])
+adonis2(bray_prok ~ Biochar.blending, data = sample_df[row.names(bray_prok),])
 
 
 ## Fungi
 set.seed(1)
-adonis2(bray_fun ~ Material * Biochar + sample_time, data = sample_df[row.names(bray_fun),])
+adonis2(bray_fun ~ Feedstock * Biochar.blending + sample_time, data = sample_df[row.names(bray_fun),])
 set.seed(1)
-adonis2(bray_fun ~ Biochar, data = sample_df[row.names(bray_fun),])
+adonis2(bray_fun ~ Biochar.blending, data = sample_df[row.names(bray_fun),])
 
 #
 ################################### ALPHA DIVERSITY              ####
@@ -813,7 +838,7 @@ alpha_prok$ID_well <- row.names(alpha_prok)
 alpha_prok <- merge(alpha_prok, sample_df, by = "ID_well")
 
 alpha_prok.plot <- melt(alpha_prok[,1:10], id.vars = c("ID_well", "ID_block", "ID_sample", "sample_time",
-                                                       "Biochar", "Material", "Treatment"))
+                                                       "Biochar.blending", "Feedstock", "Treatment"))
 
 alpha_prok.plot$sample_time <- factor(alpha_prok.plot$sample_time, levels = c("Initial", "Final"))
 
@@ -849,7 +874,7 @@ alpha_fun$ID_well <- row.names(alpha_fun)
 alpha_fun <- merge(alpha_fun, sample_df, by = "ID_well")
 
 alpha_fun.plot <- melt(alpha_fun[,1:10], id.vars = c("ID_well", "ID_block", "ID_sample", "sample_time",
-                                                       "Biochar", "Material", "Treatment"))
+                                                       "Biochar.blending", "Feedstock", "Treatment"))
 
 alpha_fun.plot$sample_time <- factor(alpha_fun.plot$sample_time, levels = c("Initial", "Final"))
 
@@ -881,7 +906,7 @@ alpha_tot.plot <- rbind(cbind.data.frame(Group = "Bacteria", alpha_prok.plot),
                         cbind.data.frame(Group = "Fungi", alpha_fun.plot))
 
 alpha_tot.stat <- merge(subset(alpha_tot.plot, sample_time == "Initial")[,c(1,3,6:10)], subset(alpha_tot.plot, sample_time == "Final")[,c(1,3,6:10)], 
-                        by = c("Group", "ID_block", "Biochar", "Material", "Treatment", "variable"))
+                        by = c("Group", "ID_block", "Biochar.blending", "Feedstock", "Treatment", "variable"))
 
 colnames(alpha_tot.stat)[7:8] <- c("value_0", "value_6") 
 alpha_tot.stat$Increase <- alpha_tot.stat$value_6 / alpha_tot.stat$value_0
@@ -908,19 +933,19 @@ wilcox.test(subset(alpha_tot.stat, variable == "Hill–Simpson" & Group == "Fung
 
 ## BETA DIVERSITY
 gg.div_beta <- ggplot(nMDS_prok.plot) + 
-  geom_line(aes(x = MDS1, y = MDS2, fill = Material, group = ID_block), show.legend = FALSE) +
-  geom_point(aes(x = MDS1, y = MDS2, fill = Material, shape = Biochar, size = Biochar, color = sample_time), 
+  geom_line(aes(x = MDS1, y = MDS2, fill = Feedstock, group = ID_block), show.legend = FALSE) +
+  geom_point(aes(x = MDS1, y = MDS2, fill = Feedstock, shape = Biochar.blending, size = Biochar.blending, color = sample_time), 
              stroke = 1.5) +
   scale_shape_manual(values = c(21, 23)) +
-  scale_size_manual(values = c(4, 3)) +
+  scale_size_manual(values = c(4, 3), guide = "none") +
   scale_fill_manual(values = col_mat) +
   scale_color_manual(values = c("#000000", "#999999")) +
   annotate(geom = "text", x = Inf, y = Inf, label = paste("stress =", round(nMDS_prok$stress, 3)), size = 6, vjust = 1.2, hjust = 1.05) +
   theme_bw() +
-  guides(shape = guide_legend(override.aes = list(size = c(4, 3))),
+  guides(shape = guide_legend(title = "Biochar\nblending", override.aes = list(size = c(4, 3)), order = 2),
          fill = guide_legend(override.aes = list(shape = 21, size = 4, 
-                                                 fill = c("#2ac219", "#facb7a", "#613b25", "#ae0e36"))),
-         color = guide_legend(title = "Time", override.aes = list(shape = 21, size = 4))) +
+                                                 fill = c("#2ac219", "#facb7a", "#613b25", "#ae0e36")), order = 1),
+         color = guide_legend(title = "Time", override.aes = list(shape = 21, size = 4), order = 3)) +
   theme(legend.position = "right",
         legend.title = element_text(size = 15, color = "black"),
         legend.text = element_text(size = 15, color = "black"))
@@ -1109,8 +1134,8 @@ wilcox.test(subset(alpha_tot.stat, variable == "Hill–Simpson" & Group == "Fung
 ################################### EXPORT FIGURE                ####
 
 gg.alpha_line <- ggplot(data = alpha_tot.plot) +
-  geom_point(aes(x = sample_time, y = value, color = Material, shape = Biochar), size = 3) +
-  geom_line(aes(x = sample_time, y = value, color = Material, group = ID_block), linewidth = 1) +
+  geom_point(aes(x = sample_time, y = value, color = Feedstock, shape = Biochar.blending), size = 3) +
+  geom_line(aes(x = sample_time, y = value, color = Feedstock, group = ID_block), linewidth = 1) +
   scale_color_manual(values = col_mat) +
   facet_wrap(Group ~ variable, scales = "free_y") +
   ylab("") + xlab("") + 
@@ -1613,18 +1638,18 @@ sem_sem <- psem(
   
   lm(Yield ~ `Bac_2` + `Fun_2` + pH + EC + C + N + P + K, data = sem_df),
   
-  lm(`Bac_2` ~ Material + Biochar + pH + EC + C + N + P + K, data = sem_df),
-  lm(`Fun_2` ~ Material + Biochar + pH + EC + C + N + P + K, data = sem_df),
+  lm(`Bac_2` ~ Feedstock + Biochar.blending + pH + EC + C + N + P + K, data = sem_df),
+  lm(`Fun_2` ~ Feedstock + Biochar.blending + pH + EC + C + N + P + K, data = sem_df),
   Bac_2 %~~% Fun_2,
   
-  lm(pH ~ Material + Biochar + C + N + P + K, data = sem_df),
-  lm(EC ~ Material + Biochar + C + N + P + K, data = sem_df),
+  lm(pH ~ Feedstock + Biochar.blending + C + N + P + K, data = sem_df),
+  lm(EC ~ Feedstock + Biochar.blending + C + N + P + K, data = sem_df),
   
-  lm(C ~ Material + Biochar, data = sem_df),
+  lm(C ~ Feedstock + Biochar.blending, data = sem_df),
   
-  lm(N ~ Material + Biochar + C, data = sem_df),
-  lm(P ~ Material + Biochar + C + N, data = sem_df),
-  lm(K ~ Material + Biochar + C, data = sem_df),
+  lm(N ~ Feedstock + Biochar.blending + C, data = sem_df),
+  lm(P ~ Feedstock + Biochar.blending + C + N, data = sem_df),
+  lm(K ~ Feedstock + Biochar.blending + C, data = sem_df),
   
   data = sem_df
 )
@@ -1636,7 +1661,7 @@ rsq_sem <- rsquared(sem_sem)
 
 std.est <- NULL
 for (res in 1:nrow(coefs_sem)) {
-  if (!grepl("Material|Biochar", coefs_sem[res,"Predictor"])) {
+  if (!grepl("Feedstock|Biochar.blending", coefs_sem[res,"Predictor"])) {
     
     beta <- as.numeric(coefs_sem[res, "Estimate"]) * (sd(as.numeric(sem_df[,coefs_sem[res,"Predictor"]])) /
                                                         as.numeric(sd(sem_df[,coefs_sem[res,"Response"]])))
@@ -1770,7 +1795,7 @@ mod.t0_prok <- merge(sample_df[,1:7], mod.t0_prok, by.x = "ID_well", by.y = "var
 mod.t6_prok <- melt(tax.mod_prok[,c("names", colnames(tax.mod_prok)[colnames(tax.mod_prok) %in% subset(sample_df, sample_time == "Final")$ID_well])])
 mod.t6_prok <- merge(sample_df[,1:7], mod.t6_prok, by.x = "ID_well", by.y = "variable")
 
-mod.t_prok <- merge(mod.t0_prok[,c(2,5:9)], mod.t6_prok[,c(2,5:9)], by = c("ID_block", "Biochar", "Material", "Treatment", "names"))
+mod.t_prok <- merge(mod.t0_prok[,c(2,5:9)], mod.t6_prok[,c(2,5:9)], by = c("ID_block", "Biochar.blending", "Feedstock", "Treatment", "names"))
 colnames(mod.t_prok)[6:7] <- c("value_t0", "value_t6")
 
 wilcox_prok <- NULL
@@ -1817,7 +1842,7 @@ mod.t0_fun <- merge(sample_df[,1:7], mod.t0_fun, by.x = "ID_well", by.y = "varia
 mod.t6_fun <- melt(tax.mod_fun[,c("names", colnames(tax.mod_fun)[colnames(tax.mod_fun) %in% subset(sample_df, sample_time == "Final")$ID_well])])
 mod.t6_fun <- merge(sample_df[,1:7], mod.t6_fun, by.x = "ID_well", by.y = "variable")
 
-mod.t_fun <- merge(mod.t0_fun[,c(2,5:9)], mod.t6_fun[,c(2,5:9)], by = c("ID_block", "Biochar", "Material", "Treatment", "names"))
+mod.t_fun <- merge(mod.t0_fun[,c(2,5:9)], mod.t6_fun[,c(2,5:9)], by = c("ID_block", "Biochar.blending", "Feedstock", "Treatment", "names"))
 colnames(mod.t_fun)[6:7] <- c("value_t0", "value_t6")
 
 wilcox_fun <- NULL
