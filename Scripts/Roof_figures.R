@@ -318,7 +318,7 @@ col_trt <- c("#613b25", "#453227", "#facb7a", "#cfb17e", "#2ac219", "#43803c", "
 names(col_trt) <- c("SCG", "SCG-BC", "CS", "CS-BC", "SW", "SW-BC", "Peat")
 
 col_t <- c("#000000", "#999999")
-names(col_t) <- c("With", "Without")
+names(col_t) <- c("Initial", "Final")
 
 #
 ################################################################################ FIGURE 1                     ####
@@ -486,8 +486,7 @@ names(label) <- c("Height", "Yield")
 gg.box_tomato <- ggplot(data = tomato_df) +
   geom_point(aes(x = Treatment, y = value, color = Treatment), position = position_jitterdodge(), size = 3, show.legend = FALSE) +
   geom_boxplot(aes(x = Treatment, y = value, color = Treatment), alpha = 0.25, size = 2, show.legend = FALSE) +
-  geom_label(data = stats_df, aes(x = Treatment, y = pos, label = groups), 
-             color = "black", fill = NA, label.size = NA, size = 7) +
+  geom_label(data = stats_df, aes(x = Treatment, y = pos*1.05, label = groups),              color = "black", fill = NA, label.size = NA, size = 7) +
   facet_wrap(~ variable, nrow = 1, scales = "free_y", labeller = as_labeller(label)) +
   scale_color_manual(values = col_trt) +
   theme_bw() +
@@ -845,21 +844,19 @@ alpha_prok.plot$sample_time <- factor(alpha_prok.plot$sample_time, levels = c("I
 ## BOXPLOT
 gg.alpha_prok <- ggplot(data = alpha_prok.plot) +
   geom_point(aes(x = Treatment, y = value, fill = Treatment, color = sample_time), 
-             size = 3, shape = 21, position = position_jitterdodge(), show.legend = FALSE) +  
+             size = 2, stroke = 1, shape = 21, alpha = 0.75, position = position_jitterdodge(), show.legend = FALSE) +  
   geom_boxplot(aes(x = Treatment, y = value, fill = Treatment, color = sample_time), 
-             position = position_dodge(), alpha = 0.75, outlier.shape = NA) +
+               size = 1, position = position_dodge(), alpha = 0.75, outlier.shape = NA, show.legend = FALSE) +
   scale_fill_manual(values = col_trt) +
   scale_color_manual(values = col_t) +
   facet_wrap( ~ variable, scales = "free_y", ncol = 1) +
   ylab("") + xlab("") + 
   theme_bw() +
-  theme(legend.position = "none",
-        legend.title = element_text(size = 17, color = "black"),
-        legend.text = element_text(size = 15, color = "black"),
-        axis.text.y = element_text(size = 15, color = "black"),
+  theme(axis.text.y = element_text(size = 15, color = "black"),
         axis.text.x = element_text(size = 15, color = "black", angle = 90, vjust = 0.5, hjust = 1),
         strip.text = element_text(size = 15, color = "black"),
-        strip.background = element_rect(fill = "white"))
+        strip.background = element_rect(fill = "white"), 
+        plot.margin = ggplot2::margin(t = 5, b = -10, r = 5, l = 5))
 
 gg.alpha_prok
 
@@ -881,21 +878,19 @@ alpha_fun.plot$sample_time <- factor(alpha_fun.plot$sample_time, levels = c("Ini
 ## BOXPLOT
 gg.alpha_fun <- ggplot(data = alpha_fun.plot) +
   geom_point(aes(x = Treatment, y = value, fill = Treatment, color = sample_time), 
-             size = 3, shape = 21, position = position_jitterdodge(), show.legend = FALSE) +  
+             size = 2, stroke = 1, shape = 21, alpha = 0.75, position = position_jitterdodge(), show.legend = FALSE) +  
   geom_boxplot(aes(x = Treatment, y = value, fill = Treatment, color = sample_time), 
-               position = position_dodge(), alpha = 0.75, outlier.shape = NA) +
+               size = 1, position = position_dodge(), alpha = 0.75, outlier.shape = NA, show.legend = FALSE) +
   scale_fill_manual(values = col_trt) +
   scale_color_manual(values = col_t) +
   facet_wrap( ~ variable, scales = "free_y", ncol = 1) +
   ylab("") + xlab("") + 
   theme_bw() +
-  theme(legend.position = "none",
-        legend.title = element_text(size = 17, color = "black"),
-        legend.text = element_text(size = 15, color = "black"),
-        axis.text.y = element_text(size = 15, color = "black"),
+  theme(axis.text.y = element_text(size = 15, color = "black"),
         axis.text.x = element_text(size = 15, color = "black", angle = 90, vjust = 0.5, hjust = 1),
         strip.text = element_text(size = 15, color = "black"),
-        strip.background = element_rect(fill = "white"))
+        strip.background = element_rect(fill = "white"), 
+        plot.margin = ggplot2::margin(t = 5, b = -10, r = 5, l = 5))
 
 gg.alpha_fun
 
@@ -960,37 +955,35 @@ gg.beta
 ## ALPHA DIVERSITY
 gg.div_alpha.leg <- ggplot(data = alpha_prok.plot) +
   geom_point(aes(x = Treatment, y = value, fill = Treatment, color = sample_time), 
-             size = 3, shape = 21, position = position_jitterdodge(), show.legend = FALSE) +  
-  geom_boxplot(aes(x = Treatment, y = value, color = sample_time), 
-               position = position_dodge(), alpha = 0.75, outlier.shape = NA) +
+             size = 2, stroke = 2, shape = 21, alpha = 0.75, position = position_jitterdodge(), show.legend = FALSE) +  
+  geom_boxplot(aes(x = Treatment, y = value, fill = Treatment, color = sample_time), 
+               size = 1, position = position_dodge(), alpha = 0.75, outlier.shape = NA) +
   scale_fill_manual(values = col_trt) +
   scale_color_manual(values = col_t) +
   facet_wrap( ~ variable, scales = "free_y") +
   ylab("") + xlab("") + 
   guides(color = guide_legend(title = "Time", override.aes = list(linewidth = 1.5)),
-         fill = guide_legend(nrow = 1)) +
+         fill = "none") +
   theme_bw() +
   theme(legend.position = "bottom",
         legend.title = element_text(size = 17, color = "black"),
         legend.text = element_text(size = 15, color = "black"),
-        axis.text.y = element_text(size = 15, color = "black"),
-        axis.text.x = element_text(size = 15, color = "black", angle = 90, vjust = 0.5, hjust = 1),
-        strip.text = element_text(size = 15, color = "black"),
-        strip.background = element_rect(fill = "white"))
+        axis.text.y = element_blank(), 
+        legend.box.margin = ggplot2::margin(t = 0, b = 5, r = 5, l = 5))
 
-gg.div_alpha.leg <- get_plot_component(gg.div_alpha.leg, "guide-box", return_all = TRUE) 
+gg.div_alpha.leg <- get_legend(gg.div_alpha.leg) 
 
 gg.alpha <- plot_grid(plot_grid(gg.alpha_prok, gg.alpha_fun, labels = c("C", "D"), label_size = 18), 
-                      gg.div_alpha.leg[[3]], ncol = 1, rel_heights = c(1, 0.1))
+                      gg.div_alpha.leg, ncol = 1, rel_heights = c(1, 0.05))
 gg.alpha
 
 
 ## FIGURE 2
 
-gg.figure2 <- plot_grid(gg.beta, gg.alpha, ncol = 1, rel_heights = c(1,1.25))
+gg.figure2 <- plot_grid(gg.beta, gg.alpha, ncol = 1, rel_heights = c(0.66, 1))
 gg.figure2
 
-ggsave("../Manuscript/Figures/Figure_2.png", gg.figure2, bg = "white", width = 10, height = 10)
+ggsave("../Manuscript/Figures/Figure_2.png", gg.figure2, bg = "white", width = 10, height = 12)
 
 #
 ################################################################################ SUPPLEMENTARY FIGURE S4                     ####
